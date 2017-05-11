@@ -13,48 +13,58 @@
             id="menu_mro_maintenance"
             parent="base.menu_mro_root"
             sequence="1"/>
-            
+  <!--       -->
+
         <!-- Maintenance request menu -->
         <record id="mro_request_tree_view" model="ir.ui.view">
             <field name="name">mro.request.tree</field>
             <field name="model">mro.request</field>
             <field name="arch" type="xml">
-                <tree fonts="bold:message_unread==True" string="Maintenance Requests">
+								    <tree fonts="bold:message_unread==True" string="Maintenance Requests" colors="blue:state == 'draft';gray:state == 'cancel';red:state == 'claim';brown:state == 'run';green:state == 'done';yellow:state == 'reject'">
                     <field name="message_unread" invisible="1"/>
                     <field name="name"/>
                     <field name="execution_date" string="Date"/>
-                    <field name="asset_id"/>
+                    <!-- <field name="asset_id"/> -->
+										<field name="cen_ser"/>
+										<field name="division"/>
                     <field name="cause"/>
                     <field name="state"/>
                 </tree>
             </field>
         </record>
-        
+
         <record id="mro_request_form_view" model="ir.ui.view">
             <field name="name">mro.request.form</field>
             <field name="model">mro.request</field>
             <field name="arch" type="xml">
                 <form string="Maintenance Request" version="7.0">
                     <header>
-                        <button name="button_send_request" states="draft" string="Send Request" class="oe_highlight"/>
-                        <button name="button_confirm_request" states="claim" string="Confirm Request" class="oe_highlight" groups="asset.group_mro_user"/>
-                        <button name="%(action_request_reject)d" states="claim" string="Reject Request" type="action" groups="asset.group_mro_user"/>
-                        <button name="button_cancel" states="draft" string="Cancel"/>
-                        <field name="state" widget="statusbar" statusbar_visible="draft,claim,run,done"/>
-                    </header>
+											  <button name="button_send_request" states="draft" string="Send Request" class="oe_highlight" groups="asset.group_mro_envia_pet"/>
+                        <button name="button_confirm_request" states="claim" string="Confirm Request" class="oe_highlight" groups="asset.group_mro_acepta_pet"/>
+                        <button name="%(action_request_reject)d" states="claim" string="Reject Request" type="action" groups="asset.group_mro_rechaza_pet"/>
+                        <button name="button_cancel" states="draft" string="Cancel" groups="asset.group_mro_cancela_pet"/>
+												<button name="button_cancel" states="claim" string="Cancel" groups="asset.group_mro_cancela_pet"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,claim,run,done" statusbar_colors='{"reject":"yellow","run":"red"}'/>
+									  </header>
                     <sheet>
                         <div class="oe_title">
                             <h1>Maintenance Request <field name="name" class="oe_inline" readonly="1"/></h1>
                         </div>
                         <group>
                             <group>
-                                <field name="asset_id"/>
+<field name="sol_por"/>
+															<field name="create_uid" string="Creada por: " readonly="1" groups="asset.group_mro_customer_port"/>
+	                            <field name="asset_id"  readonly="0" groups="asset.group_mro_customer_port"/>
+
+															<!--     <field name="asset_id"/>    -->
+													      <field name="cen_ser"/>
+																<field name="division"/>
                                 <field name="cause"/>
-                                <field name="breakdown"/>
+                                <field name="breakdown" groups="asset.group_mro_customer_port" />
                             </group>
                             <group>
-                                <field name="requested_date" attrs="{'invisible':[('breakdown','=',True),('state','=','draft')],'readonly':[('state','!=','draft')]}" on_change="onchange_requested_date(requested_date)"/>
-                                <field name="execution_date" on_change="onchange_execution_date(execution_date,state,breakdown)"/>
+                                <field name="requested_date" string="Fecha Solicitada" attrs="{'invisible':[('breakdown','=',True),('state','=','draft')],'readonly':[('state','!=','draft')]}" on_change="onchange_requested_date(requested_date)"/>
+                                <field name="execution_date" string="Fecha Ejecuciòn-Cancelaciòn"  attrs="{'invisible':[('state','not in', ('done','cancel'))],'readonly':[('state','run','draft')]}" on_change="onchange_execution_date(execution_date,state,breakdown)"/>
                             </group>
                         </group>
                         <group string="Reject Reason" states="reject">
@@ -71,7 +81,7 @@
                 </form>
             </field>
         </record>
-        
+
         <record id="mro_request_search" model="ir.ui.view">
             <field name="name">mro.request.search</field>
             <field name="model">mro.request</field>
@@ -104,19 +114,27 @@
             <field name="name">mro.order.tree</field>
             <field name="model">mro.order</field>
             <field name="arch" type="xml">
-                <tree fonts="bold:message_unread==True" string="Maintenance Orders">
-                    <field name="message_unread" invisible="1"/>
-                    <field name="name"/>
-                    <field name="date_execution" string="Order Date" widget="date"/>
-                    <field name="asset_id"/>
-                    <field name="maintenance_type"/>
-                    <field name="description"/>
-                    <field name="origin"/>
-                    <field name="state"/>
+  						<tree string="Maintenance Orders"  fonts="bold:message_unread==True" colors="blue:state == 'draft';green:state == 'done';gray:state == 'cancel';red:state == 'ready';brown:state == 'client'">
+									<field name="message_unread" invisible="1"/>
+									<field name="name"/>
+									<field name="date_execution" string="Order Date" widget="date"/>
+									<field name="asset_id"/>
+									<field name="division"/>   <!-- Agregado Division en vista -->
+									<field name="maintenance_type"/>
+									<field name="userman_id"/>  <!-- Agregado Manager en vista -->
+									<field name="usergo_id"/>    <!-- Agregado Realizado por en vista -->
+									<field name="description"/>
+									<field name="create_date" string="Creado" widget="date"/>
+									<field name="origin"/>
+									<field name="state"/>
+
+									<field name="create_uid" string="G. de O.M:"/>
+
+									<field name="write_uid" string="Ult. Modif."/>
                 </tree>
             </field>
         </record>
-        
+
         <record id="mro_order_calendar_view" model="ir.ui.view">
             <field name="name">mro.order.calendar</field>
             <field name="model">mro.order</field>
@@ -127,14 +145,15 @@
                 </calendar>
             </field>
         </record>
-        
+
         <record id="mro_order_form_view" model="ir.ui.view">
             <field name="name">mro.order.form</field>
             <field name="model">mro.order</field>
             <field name="arch" type="xml">
                 <form string="Maintenance Orders" version="7.0">
                     <header>
-                        <button name="button_confirm_order" states="draft" string="Confirm Maintenance" class="oe_highlight"/>
+
+                        <button name="button_confirm_order" states="draft,client" string="Confirm Maintenance" class="oe_highlight"/>
                         <button name="button_done" states="ready" string="Done" class="oe_highlight"/>
                         <button name="force_done" states="released" string="Done" class="oe_highlight" type="object"/>
                         <button name="force_parts_reservation" states="released" string="Force Reservation" type="object"/>
@@ -149,13 +168,20 @@
                         </div>
                         <group>
                             <group>
-                                <field name="asset_id"/>
+															  <field name="description" string="Detalle de la Orden"/>
+																<field name="sol_por"/>
+                                <field name="asset_id" on_change="onchange_asset(asset_id)"/>
+                                <field name="category_ids" invisible="1"/>
                                 <field name="maintenance_type"/>
                                 <label for="task_id" attrs="{'invisible':[('maintenance_type','=','bm')]}"/>
                                 <div attrs="{'invisible':[('maintenance_type','=','bm')]}">
-                                    <field name="task_id" domain="[('asset_id','=',asset_id),('maintenance_type','=',maintenance_type)]" attrs="{'required':[('maintenance_type','!=','bm')]}" on_change="onchange_task(task_id,parts_lines)"/>
+                                    <field name="task_id" domain="[('category_id','in',category_ids[0][2]),('maintenance_type','=',maintenance_type)]" attrs="{'required':[('maintenance_type','!=','bm')]}" on_change="onchange_task(task_id,parts_lines)"/>
                                 </div>
-                                <field name="description"/>
+
+																<field name="userman_id"/>      <!-- Agregado Supervisor en vista -->
+																<field name="usergo_id"/>      <!-- Agregado Realizado por en vista -->
+																<field name="division"/>      <!-- Agregado Division en vista -->
+
                             </group>
                             <group>
                                 <field name="date_planned" on_change="onchange_planned_date(date_planned)"/>
@@ -230,8 +256,9 @@
                             </page>
                         </notebook>
                         <group string="Problem Description">
-                            <field name="problem_description" colspan="4" nolabel="1"/>
-                        </group>
+                            <field name="problem_description" colspan="4" nolabel="1" attrs="{'readonly':[('state','in',('done','cancel'))]}" />
+
+												</group>
                     </sheet>
                     <div class="oe_chatter">
                         <field name="message_follower_ids" widget="mail_followers"/>
@@ -251,7 +278,7 @@
                 </search>
             </field>
         </record>
-        
+
         <record id="action_orders" model="ir.actions.act_window">
             <field name="name">Maintenance Orders</field>
             <field name="type">ir.actions.act_window</field>
@@ -259,40 +286,40 @@
             <field name="view_type">form</field>
             <field name="view_mode">tree,form,calendar</field>
         </record>
-            
+
         <menuitem name="Maintenance Orders"
             action="action_orders"
             id="menu_mro_order"
             parent="menu_mro_maintenance"
             sequence="10"/>
-            
+
         <!-- Parts menu -->
         <menuitem name="Parts"
             id="menu_maintenance_parts"
             parent="base.menu_mro_root"
             groups="asset.group_mro_user"
             sequence="9"/>
-            
+
         <menuitem name="Parts"
             action="product.product_normal_action"
             id="menu_maintenance_parts_parts"
             parent="menu_maintenance_parts"
             sequence="100"/>
-            
-        <!-- Tasks menu -->
 
+        <!-- Tasks menu -->
         <record id="mro_task_tree_view" model="ir.ui.view">
             <field name="name">mro.task.tree</field>
             <field name="model">mro.task</field>
             <field name="arch" type="xml">
                 <tree string="Maintenance Tasks">
-                    <field name="asset_id"/>
+                    <field name="category_id"/>
                     <field name="name"/>
+										<field name="division"/>
                     <field name="maintenance_type"/>
                 </tree>
             </field>
         </record>
-        
+
         <record id="mro_task_form_view" model="ir.ui.view">
             <field name="name">mro.task.form</field>
             <field name="model">mro.task</field>
@@ -305,7 +332,8 @@
                         <h1>Task Name <field name="name" class="oe_inline"/></h1>
                     </div>
                     <group>
-                        <field name="asset_id"/>
+                        <field name="category_id"/>
+												<field name="division"/>
                         <field name="maintenance_type"/>
                         <field name="active"/>
                     </group>
@@ -348,18 +376,18 @@
             <field name="res_model">mro.task</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
-        </record>        
-        
+        </record>
+
         <menuitem name="Tasks"
             id="menu_maintenance_tasks"
             parent="base.menu_mro_root"
             sequence="9"/>
-            
+
         <menuitem name="Tasks"
             action="action_tasks"
             id="menu_maintenance_tasks_tasks"
             parent="menu_maintenance_tasks"
             sequence="100"/>
-    
+
  	</data>
 </openerp>

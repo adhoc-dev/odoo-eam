@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2013 CodUP (<http://codup.com>).
+#    Copyright (C) 2013-2015 CodUP (<http://codup.com>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,6 +20,8 @@
 ##############################################################################
 
 from openerp.osv import fields, osv
+from openerp.tools.translate import _
+
 
 class asset_asset(osv.osv):
     _inherit = 'asset.asset'
@@ -27,5 +29,18 @@ class asset_asset(osv.osv):
         'meter_ids': fields.one2many('mro.pm.meter', 'asset_id', 'Meter'),
     }
 
+    def action_view_rules(self, cr, uid, ids, context=None):
+        category_ids = []
+        for asset in self.browse(cr,uid,ids,context=context):
+            category_ids = category_ids + [category.id for category in asset.category_ids]
+        return {
+            'domain': "[('category_id','in',[" + ','.join(map(str, category_ids)) + "])]",
+            'name': _('Scheduling Rules'),
+            'view_type': 'form',
+            'view_mode': 'tree,form',
+            'res_model': 'mro.pm.rule',
+            'type': 'ir.actions.act_window',
+            'target': 'current',
+        }
 
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

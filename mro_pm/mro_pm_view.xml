@@ -92,10 +92,10 @@
                     </header>
                     <sheet>
                         <div class="oe_title">
-                            <div class="oe_edit_only">
-                                <label for="name" string="Meter Name"/>
+                            <div class="oe_edit_only" states="draft">
+                                <label for="name" string="Parameter"/>
                             </div>
-                            <h1><field name="name" class="oe_inline"/></h1>
+                            <h1><field name="name" class="oe_inline" on_change="onchange_parameter(name)"/></h1>
                         </div>
                         <div class="oe_right">
                             <h2><field name="asset_id" readonly="1"/></h2>
@@ -151,6 +151,32 @@
             </field>
         </record>
 
+        <!-- Parameters menu -->
+        <record id="mro_pm_parameter_tree_view" model="ir.ui.view">
+            <field name="name">mro.pm.parameter.tree</field>
+            <field name="model">mro.pm.parameter</field>
+            <field name="arch" type="xml">
+                <tree string="Parameters" editable="top">
+                    <field name="name"/>
+                    <field name="parameter_uom"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="action_parameters" model="ir.actions.act_window">
+            <field name="name">Parameters</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">mro.pm.parameter</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree</field>
+        </record>
+
+        <menuitem name="Parameters"
+            action="action_parameters"
+            id="menu_parameters"
+            parent="asset.menu_maintenance_config"
+            sequence="1"/>
+
         <!-- Meters Ratio menu -->
         <record id="mro_pm_meter_ratio_tree_view" model="ir.ui.view">
             <field name="name">mro.pm.meter.ratio.tree</field>
@@ -196,12 +222,6 @@
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
         </record>
-
-        <menuitem name="Configuration"
-            id="asset.menu_maintenance_config"
-            parent="base.menu_mro_root"
-            groups="asset.group_mro_manager"
-            sequence="200"/>
 
         <menuitem name="Meter Ratio"
             action="action_meter_ratio"
@@ -260,7 +280,7 @@
             <field name="arch" type="xml">
                 <tree string="PM Rule" version="7.0">
                     <field name="name"/>
-                    <field name="asset_id"/>
+                    <field name="category_id"/>
                 </tree>
             </field>
         </record>
@@ -276,18 +296,18 @@
                         </div>
                         <group>
                             <group>
-                                <field name="asset_id" on_change="onchange_asset(pm_rules_line_ids)"/>
-                                <field name="meter_id" domain="[('asset_id','=',asset_id),('state','=','reading')]" attrs="{'invisible':[('asset_id','=',False)]}" on_change="onchange_meter(meter_id)"/>
+                                <field name="category_id" on_change="onchange_category(pm_rules_line_ids)"/>
+                                <field name="parameter_id" on_change="onchange_parameter(parameter_id)"/>
                                 <field name="horizon"/>
                              </group>
                             <group>
                                 <field name="active"/>
-                                <field name="meter_uom" readonly="1" attrs="{'invisible':['|',('asset_id','=',False),('meter_id','=',False)]}"/>
+                                <field name="parameter_uom" readonly="1" attrs="{'invisible':[('parameter_id','=',False)]}"/>
                             </group>
                         </group>
-                        <field name="pm_rules_line_ids" context="{'asset_id':asset_id}" attrs="{'invisible':[('asset_id','=',False)]}"  options='{"always_reload":True}'>
+                        <field name="pm_rules_line_ids" context="{'category_id':category_id}" attrs="{'invisible':[('category_id','=',False)]}"  options='{"always_reload":True}'>
                             <tree string="Tasks" editable="bottom">
-                                <field name="task_id" domain="[('asset_id','=',asset_id)]"/>
+                                <field name="task_id" domain="[('category_id','=',category_id)]"/>
                                 <field name="meter_interval_id"/>
                             </tree>
                         </field>

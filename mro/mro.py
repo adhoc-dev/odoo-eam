@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2013-2014 CodUP (<http://codup.com>).
+#    Copyright (C) 2013-2015 CodUP (<http://codup.com>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -26,6 +26,7 @@ import openerp.addons.decimal_precision as dp
 from openerp.tools.translate import _
 from openerp import netsvc
 
+
 class mro_order(osv.osv):
     """
     Maintenance Orders
@@ -35,6 +36,7 @@ class mro_order(osv.osv):
     _inherit = ['mail.thread', 'ir.needaction_mixin']
 
     STATE_SELECTION = [
+        ('client', 'PORTAL'),
         ('draft', 'DRAFT'),
         ('released', 'WAITING PARTS'),
         ('ready', 'READY TO MAINTENANCE'),
@@ -72,6 +74,7 @@ class mro_order(osv.osv):
 
     _columns = {
         'name': fields.char('Reference', size=64),
+        'sol_por': fields.char('Solicitado Por', size=32, translate=True, required=False, readonly=True, states={'draft': [('readonly', False)]}),
         'origin': fields.char('Source Document', size=64, readonly=True, states={'draft': [('readonly', False)]},
             help="Reference of the document that generated this maintenance order."),
         'state': fields.selection(STATE_SELECTION, 'Status', readonly=True,
@@ -79,15 +82,20 @@ class mro_order(osv.osv):
             If the order is confirmed the status is set to 'Waiting Parts'.\n\
             If the stock is available then the status is set to 'Ready to Maintenance'.\n\
             When the maintenance is over, the status is set to 'Done'."),
+        'userman_id': fields.many2one('res.users', 'Supervisor' , required=True , readonly=True, states={'draft': [('readonly', False)]}),
+        'usergo_id': fields.many2one('res.users', 'Realizado Por' , readonly=True, states={'ready': [('required', True), ('readonly', False)] }),
+        'division': fields.selection([('ext','Extinción'),('det','Detección'),('bms','Bms'),('cctv','Cctv'),('otros','Otros')],'División', size=32 , required=True , readonly=True, states={'draft': [('readonly', False)]}),
         'maintenance_type': fields.selection(MAINTENANCE_TYPE_SELECTION, 'Maintenance Type', required=True, readonly=True, states={'draft': [('readonly', False)]}),
         'task_id': fields.many2one('mro.task', 'Task', readonly=True, states={'draft': [('readonly', False)]}),
         'description': fields.char('Description', size=64, translate=True, required=True, readonly=True, states={'draft': [('readonly', False)]}),
-        'asset_id': fields.many2one('asset.asset', 'Asset', required=True, readonly=True, states={'draft': [('readonly', False)]}),
-        'date_planned': fields.datetime('Planned Date', required=True, select=1, readonly=True, states={'draft':[('readonly',False)]}),
-        'date_scheduled': fields.datetime('Scheduled Date', required=True, select=1, readonly=True, states={'draft':[('readonly',False)],'released':[('readonly',False)],'ready':[('readonly',False)]}),
-        'date_execution': fields.datetime('Execution Date', required=True, select=1, readonly=True, states={'draft':[('readonly',False)],'released':[('readonly',False)],'ready':[('readonly',False)]}),
-        'parts_lines': fields.one2many('mro.order.parts.line', 'maintenance_id', 'Planned parts',
-            readonly=True, states={'draft':[('readonly',False)]}),
+        #'asset_id': fields.many2one('asset.asset', 'Asset', required=False, readonly=True, states={'draft': [('readonly', False)],'client':[('required',False),('readonly',False)],'run':[('required',True)]}),
+
+        'asset_id': fields.many2one('asset.asset', 'Asset', readonly=True, states={'ready':[('required',True)], 'draft':[('required',True), ('readonly', False)]}),
+
+        'date_planned': fields.datetime('Planned Date', required=True, select=1, readonly=True, states={'draft':[('readonly',False)],'client':[('readonly',False)]}),
+        'date_scheduled': fields.datetime('Scheduled Date', required=True, select=1, readonly=True, states={'draft':[('readonly',False)],'released':[('readonly',False)],'ready':[('readonly',False)],'client':[('readonly',False)]}),
+        'date_execution': fields.datetime('Execution Date', required=True, select=1, readonly=True, states={'draft':[('readonly',False)],'released':[('readonly',False)],'ready':[('readonly',False)],'client':[('readonly',False)]}),
+        'parts_lines': fields.one2many('mro.order.parts.line', 'maintenance_id', 'Planned parts',readonly=True, states={'draft':[('readonly',False)]}),
         'parts_ready_lines': fields.function(_get_available_parts, relation="stock.move", method=True, type="one2many", multi='parts'),
         'parts_move_lines': fields.function(_get_available_parts, relation="stock.move", method=True, type="one2many", multi='parts'),
         'parts_moved_lines': fields.function(_get_available_parts, relation="stock.move", method=True, type="one2many", multi='parts'),
@@ -95,11 +103,13 @@ class mro_order(osv.osv):
         'labor_description': fields.text('Labor Description',translate=True),
         'operations_description': fields.text('Operations Description',translate=True),
         'documentation_description': fields.text('Documentation Description',translate=True),
-        'problem_description': fields.text('Problem Description'),
+        #'problem_description': fields.text('Problem Description', readonly=True, states={'ready': [('required', True), ('readonly', False)] }),
+        'problem_description': fields.text('Problem Description', readonly=True, states={'ready': [('required', True), ('readonly', False)], 'done': [('required', True), ('readonly', False)] }),
         'company_id': fields.many2one('res.company','Company',required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'procurement_group_id': fields.many2one('procurement.group', 'Procurement group', copy=False),
+        'category_ids': fields.related('asset_id', 'category_ids', type='many2many', relation='asset.category', string='Asset Category', readonly=True),
     }
-    
+
     _defaults = {
         'state': lambda *a: 'draft',
         'maintenance_type': lambda *a: 'bm',
@@ -110,6 +120,12 @@ class mro_order(osv.osv):
     }
 
     _order = 'date_execution'
+
+    def onchange_asset(self, cr, uid, ids, asset):
+        value = {}
+        if asset:
+            value['category_ids'] = self.pool.get('asset.asset').browse(cr, uid, asset).category_ids
+        return {'value': value}
 
     def onchange_planned_date(self, cr, uid, ids, date):
         """
@@ -172,10 +188,12 @@ class mro_order(osv.osv):
                 if any(states) or len(states) == 0: res = False
         return res
 
-    def action_confirm(self, cr, uid, ids, context=None):        
+    def action_confirm(self, cr, uid, ids, context=None):
         """ Confirms maintenance order.
         @return: True
         """
+        mro.request.agended_date = 'date_planned'
+
         procurement_obj = self.pool.get('procurement.order')
         for order in self.browse(cr, uid, ids, context=context):
             proc_ids = []
@@ -197,6 +215,7 @@ class mro_order(osv.osv):
             procurement_obj.run(cr, uid, proc_ids, context=context)
             order.write({'state':'released','procurement_group_id':group_id}, context=context)
         return 0
+
 
     def action_ready(self, cr, uid, ids):
         self.write(cr, uid, ids, {'state': 'ready'})
@@ -312,8 +331,9 @@ class mro_task(osv.osv):
 
     _columns = {
         'name': fields.char('Description', size=64, required=True, translate=True),
-        'asset_id': fields.many2one('asset.asset', 'Asset', required=True),
+        'category_id': fields.many2one('asset.category', 'Asset Category', ondelete='restrict', required=True),
         'maintenance_type': fields.selection(MAINTENANCE_TYPE_SELECTION, 'Maintenance Type', required=True),
+        'division': fields.selection([('ext','Extinción'),('det','Detección'),('bms','Bms'),('cctv','Cctv'),('otros','Otros')],'División', size=32 , required=True ),
         'parts_lines': fields.one2many('mro.task.parts.line', 'task_id', 'Parts'),
         'tools_description': fields.text('Tools Description',translate=True),
         'labor_description': fields.text('Labor Description',translate=True),
@@ -378,7 +398,7 @@ class mro_request(osv.osv):
     STATE_SELECTION = [
         ('draft', 'Draft'),
         ('claim', 'Claim'),
-        ('run', 'Execution'),
+        ('run', 'Aceptada-Ejecuciòn'),
         ('done', 'Done'),
         ('reject', 'Rejected'),
         ('cancel', 'Canceled')
@@ -400,14 +420,18 @@ class mro_request(osv.osv):
             If the request is confirmed the status is set to 'Execution'.\n\
             If the request is rejected the status is set to 'Rejected'.\n\
             When the maintenance is over, the status is set to 'Done'."),
-        'asset_id': fields.many2one('asset.asset', 'Asset', required=True, readonly=True, states={'draft': [('readonly', False)]}),
+        'asset_id': fields.many2one('asset.asset', 'Asset', required=False, readonly=True, states={'claim': [('required',True),('readonly', False)]}),
+        'sol_por': fields.char('Solicitado Por', size=32, translate=True, required=True, readonly=True, states={'draft': [('readonly', False)]}),
+        'cen_ser': fields.char('Centro de Servicio', size=64, translate=True, required=True, readonly=True, states={'draft': [('readonly', False)]}),
         'cause': fields.char('Cause', size=64, translate=True, required=True, readonly=True, states={'draft': [('readonly', False)]}),
         'description': fields.text('Description', readonly=True, states={'draft': [('readonly', False)]}),
         'reject_reason': fields.text('Reject Reason', readonly=True),
-        'requested_date': fields.datetime('Requested Date', required=True, select=1, readonly=True, states={'draft': [('readonly', False)]}, help="Date requested by the customer for maintenance."),
+        'division': fields.selection([('ext','Extinción'),('det','Detección'),('bms','Bms'),('cctv','Cctv'),('otros','Otros')],'Area de Servicio', size=32 , required=True, readonly=True, states={'draft': [('readonly', False)]}),
+        'requested_date': fields.datetime('Requested Date', required=True, select=1, readonly=True, states={'draft': [('readonly', False), ('required', False)]}, help="Date requested by the customer for maintenance."),
         'execution_date': fields.datetime('Execution Date', required=True, select=1, readonly=True, states={'draft':[('readonly',False)],'claim':[('readonly',False)]}),
         'breakdown': fields.boolean('Breakdown', readonly=True, states={'draft': [('readonly', False)]}),
         'create_uid': fields.many2one('res.users', 'Responsible'),
+        'agended_date': fields.datetime('Fecha Agendada', required=False, select=1, readonly=True, help="Date requested by the customer for maintenance."),
     }
 
     _defaults = {
@@ -446,6 +470,7 @@ class mro_request(osv.osv):
         """ Confirms maintenance request.
         @return: Newly generated Maintenance Order Id.
         """
+
         order = self.pool.get('mro.order')
         order_id = False
         for request in self.browse(cr, uid, ids, context=context):
@@ -454,11 +479,14 @@ class mro_request(osv.osv):
                 'date_scheduled':request.requested_date,
                 'date_execution':request.requested_date,
                 'origin': request.name,
-                'state': 'draft',
+                'state': 'client',
+                'userman_id': uid,
                 'maintenance_type': 'bm',
+                'division': request.division,
                 'asset_id': request.asset_id.id,
-                'description': request.cause,
-                'problem_description': request.description,
+                'description': 'Centro: ' + request.cen_ser + ' - ' + request.cause ,
+                'problem_description': 'Solicitud: '+ request.name + ' Descripcion: ' + request.description + ' - INFORME RESULTANTE: ',
+                'sol_por': request.sol_por,
             })
         self.write(cr, uid, ids, {'state': 'run'})
         return order_id

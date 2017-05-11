@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2013-2014 CodUP (<http://codup.com>).
+#    Copyright (C) 2013-2015 CodUP (<http://codup.com>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,7 +21,7 @@
 
 {
     'name': 'MRO',
-    'version': '1.1',
+    'version': '1.3',
     'summary': 'Asset Maintenance, Repair and Operation',
     'description': """
 Manage Maintenance process in OpenERP
@@ -36,6 +36,9 @@ Main Features
     * Maintenance Work Orders Management
     * Parts Management
     * Tasks Management (standard job)
+    * Convert Maintenance Order to Task
+    * Print Maintenance Order
+    * Print Maintenance Request
 
 Required modules:
     * asset
@@ -51,11 +54,16 @@ Required modules:
         'security/mro_security.xml',
         'security/ir.model.access.csv',
         'wizard/reject_view.xml',
+        'wizard/convert_order.xml',
+        'asset_view.xml',
         'mro_workflow.xml',
         'mro_request_workflow.xml',
         'mro_sequence.xml',
         'mro_view.xml',
+        'mro_report.xml',
         'mro_data.xml',
+        'views/report_mro_order.xml',
+        'views/report_mro_request.xml',
     ],
     'application': True,
 }

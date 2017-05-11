@@ -7,6 +7,8 @@
             <field name="category_id" ref="base.module_category_hidden"/>
         </record>
 
+      
+
     </data>
 
     <data noupdate="1">
@@ -28,7 +30,7 @@
             <field ref="model_mro_request" name="model_id"/>
             <field name="domain_force">[('state','!=','draft')]</field>
             <field name="groups" eval="[(4, ref('asset.group_mro_user'))]"/>
-        </record>        
+        </record>
 
     </data>
 </openerp>

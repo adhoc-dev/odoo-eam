@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    OpenERP, Open Source Management Solution
-#    Copyright (C) 2013-2014 CodUP (<http://codup.com>).
+#    Copyright (C) 2013-2015 CodUP (<http://codup.com>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -68,6 +68,15 @@ class asset_state(osv.osv):
         color = int(state.state_color) + 1
         if (color>9): color = 0
         return self.write(cr, uid, ids, {'state_color': str(color)}, context=context)
+
+
+class asset_category(osv.osv):
+    _description = 'Asset Tags'
+    _name = 'asset.category'
+    _columns = {
+        'name': fields.char('Tag', required=True, translate=True),
+        'asset_ids': fields.many2many('asset.asset', id1='category_id', id2='asset_id', string='Assets'),
+    }
 
 
 class asset_asset(osv.osv):
@@ -169,6 +178,7 @@ class asset_asset(osv.osv):
             help="Small-sized image of the asset. It is automatically "\
                  "resized as a 64x64px image, with aspect ratio preserved. "\
                  "Use this field anywhere a small image is required."),
+        'category_ids': fields.many2many('asset.category', id1='asset_id', id2='category_id', string='Tags'),
     }
 
     _defaults = {
